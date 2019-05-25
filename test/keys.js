@@ -276,65 +276,9 @@ describe("Private key recovery", function () {
   });
 });
 
-describe("Derive Ethereum address from private key", function () {
-  var test = function (t) {
-    it(t.description + ": " + t.privateKey, function () {
-      t.assertions(keythereum.privateKeyToAddress(t.privateKey));
-      t.assertions(keythereum.privateKeyToAddress(Buffer.from(t.privateKey, "hex")));
-      t.assertions(keythereum.privateKeyToAddress(Buffer.from(t.privateKey, "hex").toString("base64")));
-    });
-  };
-  test({
-    description: "32-byte private key",
-    privateKey: "d1b1178d3529626a1a93e073f65028370d14c7eb0936eb42abef05db6f37ad7d",
-    assertions: function (address) {
-      assert.strictEqual(address, "0xcb61d5a9c4896fb9658090b597ef0e7be6f7b67e");
-    }
-  });
-  test({
-    description: "32-byte private key",
-    privateKey: "7a28b5ba57c53603b0b07b56bba752f7784bf506fa95edc395f5cf6c7514fe9d",
-    assertions: function (address) {
-      assert.strictEqual(address, "0x008aeeda4d805471df9b2a5b0f38a0c3bcba786b");
-    }
-  });
-  test({
-    description: "32-byte private key",
-    privateKey: "6445042b8e8cc121fb6a8985606a84b4cb07dac6dfb3633e769ec27dd2370984",
-    assertions: function (address) {
-      assert.strictEqual(address, "0xe1e212c353f7a682693c198ba5ff85849f8300cc");
-    }
-  });
-  test({
-    description: "32-byte private key",
-    privateKey: "490127c2782fb55943beeb31943ec26f48a9a5121cd7e91799eb354d30d46529",
-    assertions: function (address) {
-      assert.strictEqual(address, "0xf0c4ee355432a7c7da12bdef04543723d110d591");
-    }
-  });
-  test({
-    description: "31-byte private key",
-    privateKey: "fa7b3db73dc7dfdf8c5fbdb796d741e4488628c41fc4febd9160a866ba0f35",
-    assertions: function (address) {
-      assert.strictEqual(address, "0xd1e64e5480bfaf733ba7d48712decb8227797a4e");
-    }
-  });
-  test({
-    description: "30-byte private key",
-    privateKey: "81c29e8142bb6a81bef5a92bda7a8328a5c85bb2f9542e76f9b0f94fc018",
-    assertions: function (address) {
-      assert.strictEqual(address, "0x31e9d1e6d844bd3a536800ef8d8be6a9975db509");
-    }
-  });
-});
-
-describe("Create random private key, salt and initialization vector", function () {
+describe("Create random salt and initialization vector", function () {
 
   var test = function (dk, params) {
-    assert.property(dk, "privateKey");
-    assert.isNotNull(dk.privateKey);
-    assert.instanceOf(dk.privateKey, Buffer);
-    assert.strictEqual(dk.privateKey.length, params.keyBytes);
 
     assert.property(dk, "iv");
     assert.isNotNull(dk.iv);
@@ -606,7 +550,8 @@ describe("Key derivation", function () {
     input: {
       password: "testpassword",
       salt: "ae3cd4e7013836a3df6bd7241b12db061dbe2c6785853cce422d148a624ce0bd",
-      kdf: "pbkdf2-sha256"
+      kdf: "pbkdf2-sha256",
+      kdfparams: { c: 262144 }
     },
     expected: "f06d69cdc7da0faffb1008270bca38f5e31891a3a773950e6d0fea48a7188551"
   });
@@ -635,14 +580,14 @@ describe("Message authentication code", function () {
       derivedKey: "f06d69cdc7da0faffb1008270bca38f5e31891a3a773950e6d0fea48a7188551",
       ciphertext: "5318b4d5bcd28de64ee5559e671353e16f075ecae9f99c7a79a38af5f869aa46"
     },
-    output: "517ead924a9d0dc3124507e3393d175ce3ff7c1e96529c6c555ce9e51205e9b2"
+    output: "6f53cc6a1be57c225d1234c4c99b32ad1925f4c40fdd7c8a265b8e4705e773d0"
   });
   test({
     input: {
       derivedKey: "fac192ceb5fd772906bea3e118a69e8bbb5cc24229e20d8766fd298291bba6bd",
       ciphertext: "d172bf743a674da9cdad04534d56926ef8358534d458fffccd4e6ad2fbde479c"
     },
-    output: "2103ac29920d71da29f15d75b4a16dbe95cfd7ff8faea1056c33131d846e3097"
+    output: "7afc1ac901ee46cb8d9a720fe2389dbc47edbe1534f6dacb5da80f2964b61a3f"
   });
 });
 

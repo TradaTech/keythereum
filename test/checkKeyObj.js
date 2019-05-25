@@ -50,7 +50,7 @@ module.exports = {
     assert.strictEqual(keyObject.id.length, 36);
     assert.isTrue(isUUID(keyObject.id));
     assert.property(keyObject, "version");
-    assert(keyObject.version === "1" || keyObject.version === 3);
+    assert(keyObject.version === 1);
   },
 
   values: function (keythereum, t, keyObject) {

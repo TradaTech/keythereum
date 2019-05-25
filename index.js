@@ -9,20 +9,17 @@ var isBrowser = typeof process === "undefined" || !process.nextTick || Boolean(p
 
 var sjcl = require("sjcl");
 var uuid = require("uuid");
-var secp256k1 = require("secp256k1/elliptic");
-var createKeccakHash = require("keccak/js");
+var ecc = require('icetea-common').ecc
 
 function isFunction(f) {
   return typeof f === "function";
 }
 
-function keccak256(buffer) {
-  return createKeccakHash("keccak256").update(buffer).digest();
+function sha256(crypto, buffer) {
+  return crypto.createHash('sha256').update(buffer).digest();
 }
 
 module.exports = {
-
-  version: "1.1.0",
 
   browser: isBrowser,
 
@@ -43,7 +40,7 @@ module.exports = {
 
     // Key derivation function parameters
     pbkdf2: {
-      c: 262144,
+      c: 16384,
       dklen: 32,
       hash: "sha256",
       prf: "hmac-sha256"
@@ -51,7 +48,7 @@ module.exports = {
     scrypt: {
       memory: 280000000,
       dklen: 32,
-      n: 262144,
+      n: 16384,
       r: 8,
       p: 1
     }
@@ -144,16 +141,7 @@ module.exports = {
    * @return {string} Hex-encoded Ethereum address.
    */
   privateKeyToAddress: function (privateKey) {
-    var privateKeyBuffer, publicKey;
-    privateKeyBuffer = this.str2buf(privateKey);
-    if (privateKeyBuffer.length < 32) {
-      privateKeyBuffer = Buffer.concat([
-        Buffer.alloc(32 - privateKeyBuffer.length, 0),
-        privateKeyBuffer
-      ]);
-    }
-    publicKey = secp256k1.publicKeyCreate(privateKeyBuffer, false).slice(1);
-    return "0x" + keccak256(publicKey).slice(-20).toString("hex");
+    return  ecc.toPubKeyAndAddress(privateKey).address
   },
 
   /**
@@ -167,7 +155,7 @@ module.exports = {
    */
   getMAC: function (derivedKey, ciphertext) {
     if (derivedKey !== undefined && derivedKey !== null && ciphertext !== undefined && ciphertext !== null) {
-      return keccak256(Buffer.concat([
+      return sha256(this.crypto, Buffer.concat([
         this.str2buf(derivedKey).slice(16, 32),
         this.str2buf(ciphertext)
       ])).toString("hex");
@@ -179,11 +167,20 @@ module.exports = {
    */
   deriveKeyUsingScryptInNode: function (password, salt, options, cb) {
     if (!isFunction(cb)) return this.deriveKeyUsingScryptInBrowser(password, salt, options);
-    require("scrypt").hash(password, {
+    var opts = {
       N: options.kdfparams.n || this.constants.scrypt.n,
       r: options.kdfparams.r || this.constants.scrypt.r,
-      p: options.kdfparams.p || this.constants.scrypt.p
-    }, options.kdfparams.dklen || this.constants.scrypt.dklen, salt).then(cb).catch(cb);
+      p: options.kdfparams.p || this.constants.scrypt.p,
+      maxmem: options.kdfparams.memory || this.constants.scrypt.memory
+    }
+    require("crypto").scrypt(password, salt,
+      options.kdfparams.dklen || this.constants.scrypt.dklen, opts , function(err, key) {
+      if (err) {
+        cb(err)
+      } else {
+        cb(key)
+      }
+    })
   },
 
   /**
@@ -290,7 +287,7 @@ module.exports = {
     }
   },
 
-  /**
+    /**
    * Generate random numbers for private key, initialization vector,
    * and salt (for key derivation).
    * @param {Object=} params Encryption options (defaults: constants).
@@ -306,22 +303,19 @@ module.exports = {
     ivBytes = params.ivBytes || this.constants.ivBytes;
 
     function checkBoundsAndCreateObject(randomBytes) {
-      var privateKey = randomBytes.slice(0, keyBytes);
-      if (!secp256k1.privateKeyVerify(privateKey)) return self.create(params, cb);
       return {
-        privateKey: privateKey,
-        iv: randomBytes.slice(keyBytes, keyBytes + ivBytes),
-        salt: randomBytes.slice(keyBytes + ivBytes)
+        iv: randomBytes.slice(0, ivBytes),
+        salt: randomBytes.slice(ivBytes)
       };
     }
 
     // synchronous key generation if callback not provided
     if (!isFunction(cb)) {
-      return checkBoundsAndCreateObject(this.crypto.randomBytes(keyBytes + ivBytes + keyBytes));
+      return checkBoundsAndCreateObject(this.crypto.randomBytes(ivBytes + keyBytes));
     }
 
     // asynchronous key generation
-    this.crypto.randomBytes(keyBytes + ivBytes + keyBytes, function (err, randomBytes) {
+    this.crypto.randomBytes(ivBytes + keyBytes, function (err, randomBytes) {
       if (err) return cb(err);
       cb(checkBoundsAndCreateObject(randomBytes));
     });
@@ -349,7 +343,7 @@ module.exports = {
     ciphertext = this.encrypt(privateKey, derivedKey.slice(0, 16), iv, algo).toString("hex");
 
     keyObject = {
-      address: this.privateKeyToAddress(privateKey).slice(2),
+      address: this.privateKeyToAddress(privateKey),
       crypto: {
         cipher: options.cipher || this.constants.cipher,
         ciphertext: ciphertext,
@@ -357,7 +351,7 @@ module.exports = {
         mac: this.getMAC(derivedKey, ciphertext)
       },
       id: uuid.v4(), // random 128-bit UUID
-      version: 3
+      version: 1
     };
 
     if (options.kdf === "scrypt") {
@@ -429,11 +423,8 @@ module.exports = {
       if (self.getMAC(derivedKey, ciphertext) !== keyObjectCrypto.mac) {
         throw new Error("message authentication code mismatch");
       }
-      if (keyObject.version === "1") {
-        key = keccak256(derivedKey.slice(0, 16)).slice(0, 16);
-      } else {
-        key = derivedKey.slice(0, 16);
-      }
+
+      key = derivedKey.slice(0, 16);
       return self.decrypt(ciphertext, key, iv, algo);
     }
 
@@ -514,7 +505,6 @@ module.exports = {
     if (this.browser) throw new Error("method only available in Node.js");
     path = require("path");
     fs = require("fs");
-    address = address.replace("0x", "");
     address = address.toLowerCase();
 
     function findKeyfile(keystore, address, files) {

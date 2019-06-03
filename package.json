@@ -26,8 +26,8 @@
   },
   "homepage": "https://github.com/TradaTech/keythereum#readme",
   "dependencies": {
+    "@iceteachain/common": "^0.1.0",
     "crypto-browserify": "3.12.0",
-    "icetea-common": "github:TradaTech/icetea-common",
     "sjcl": "1.0.6",
     "uuid": "3.0.0"
   },

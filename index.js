@@ -9,7 +9,7 @@ var isBrowser = typeof process === "undefined" || !process.nextTick || Boolean(p
 
 var sjcl = require("sjcl");
 var uuid = require("uuid");
-var ecc = require('icetea-common').ecc
+var ecc = require('@iceteachain/common').ecc
 
 function isFunction(f) {
   return typeof f === "function";

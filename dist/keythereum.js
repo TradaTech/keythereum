@@ -351,7 +351,7 @@ module.exports = {
     ciphertext = this.encrypt(privateKey, derivedKey.slice(0, 16), iv, algo).toString("hex");
 
     keyObject = {
-      address: this.privateKeyToAddress(privateKey),
+      address: options.noAddress ? "no address" : this.privateKeyToAddress(privateKey),
       crypto: {
         cipher: options.cipher || this.constants.cipher,
         ciphertext: ciphertext,
@@ -26791,7 +26791,7 @@ module.exports={
   "_resolved": "https://registry.npmjs.org/elliptic/-/elliptic-6.4.1.tgz",
   "_shasum": "c2d0b7776911b86722c632c3c06c60f2f819939a",
   "_spec": "elliptic@^6.0.0",
-  "_where": "/Users/thi/Documents/GitHub/keythereum/node_modules/browserify-sign",
+  "_where": "/Users/hoanghuy226/Documents/Project/keythereum/node_modules/browserify-sign",
   "author": {
     "name": "Fedor Indutny",
     "email": "fedor@indutny.com"
